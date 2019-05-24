@@ -1,0 +1,18 @@
+name: Stripe Subscription
+type: module
+description: Subscription integration with Stripe.
+project: stripe_subscription
+version: 8.x-1.0-alpha1
+package: Stripe
+core: 8.x
+configure: admin/config/stripe/subscription
+
+dependencies: 
+  - stripe
+  - stripe_customer
+
+; Information added by Drupal.org packaging script on 2019-05-23
+version: 8.x-0.x-alpha
+core: 8.x
+project: stripe_subscription
+datestamp: "1526333287"

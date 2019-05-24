@@ -1,0 +1,17 @@
+
+#plans tr.pg-title td {
+  font-weight: bold;
+}
+#plans tr.pg-message {
+  font-weight: normal;
+  color: #999;
+}
+#plans tr.pg-populated {
+  display: none;
+}
+.pg {
+  background-color: #ff6;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  padding: 3px;
+}

@@ -1,0 +1,283 @@
+<?php
+/**
+ * @file
+ * Install/Update hooks
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function stripe_subscription_schema() {
+  $schema['stripe_subscriptions'] = array(
+    'description' => 'Stripe customer objects.',
+    'fields' => array(
+      'uid' => array(
+        'description' => 'User ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'customer_id' => array(
+        'description' => 'The Stripe customer ID.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'subscription_id' => array(
+        'description' => 'The Unique ID of this subscription.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'livemode' => array(
+        'description' => 'Boolean indicating whether the record came from live or test.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'account_balance' => array(
+        'description' => 'Balance for this customer.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'delinquent' => array(
+        'description' => 'Boolean indicating whether the record is delinquent.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'plan_id' => array(
+        'description' => 'The customer plan id.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'current_period_start' => array(
+        'description' => 'The plan start date.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'current_period_end' => array(
+        'description' => 'The plan end date.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'created' => array(
+        'description' => 'Date the customer was created in Stripe.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'last_sync' => array(
+        'description' => 'Date this record was last synced with Stripe.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'customer_id' => array('livemode', 'customer_id'),
+      'subscription_id' => array('subscription_id'),
+      'account_balance' => array('livemode', 'account_balance'),
+      'delinquent' => array('livemode', 'delinquent'),
+      'last_sync' => array('livemode', 'last_sync'),
+    ),
+    'primary key' => array('uid'),
+  );
+
+  $schema['stripe_plan_groups'] = array(
+    'description' => 'Subscription plan groups.',
+    'fields' => array(
+      'pgid' => array(
+        'description' => 'The plan group id.',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'Plan group name',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'description' => array(
+        'description' => 'Plan group description',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      )
+    ),
+    'indexes' => array(
+      'name' => array('name'),
+    ),
+    'primary key' => array('pgid')
+  );
+
+  $schema['stripe_plan_pg'] = array(
+    'description' => 'Relation of plans to plan groups.',
+    'fields' => array(
+      'pgid' => array(
+        'description' => 'The primary identifier for a plan group.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'plan_id' => array(
+        'description' => 'The Stripe plan ID.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'weight' => array(
+        'description' => 'Weight for ordering',
+        'type' => 'int',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'livemode' => array(
+        'description' => 'Boolean indicating whether the record came from live or test.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'plan_id' => array('plan_id'),
+      'pgid' => array('pgid', 'weight'),
+    )
+  );
+
+  $schema['stripe_plan_roles'] = array(
+    'description' => 'Subscription role information.',
+    'fields' => array(
+      'plan_id' => array(
+        'description' => 'The Stripe plan ID.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'livemode' => array(
+        'description' => 'Boolean indicating whether the record came from live or test.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'event' => array(
+        'description' => 'subscribe or unsubscribe',
+        'type' => 'varchar',
+        'length' => 12,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'action' => array(
+        'description' => 'add or remove',
+        'type' => 'varchar',
+        'length' => 8,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'rid' => array(
+        'description' => 'Role ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'plan_id' => array('livemode', 'plan_id'),
+      'event' => array('livemode', 'event'),
+    )
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install()
+ */
+function stripe_subscription_install() {
+  db_insert('stripe_plan_groups')
+    ->fields(array('name' => 'Default', 'description' => 'Plans in this group are always active.'))
+    ->execute();
+
+  drupal_set_message(t('The Stripe Subscription module was installed. View README.txt for instructions on creating Plans and configuring Roles.'));
+}
+
+/**
+ * Rename {stripe_customers} to {stripe_subscriptions}
+ */
+function stripe_subscription_update_7001() {
+  if (db_table_exists('stripe_customers') && !module_exists('stripe_customer')) {
+    if (db_rename_table('stripe_customers', 'stripe_subscriptions')) {
+      return t('Renamed {stripe_customers} table to {stripe_subscriptions}');
+    }
+    else {
+      return t('The {stripe_customers} table was already renamed.');
+    }
+  }
+}
+
+/**
+ * Delete the 'customer' column from stripe_subscriptions table.
+ */
+function stripe_subscription_update_7002() {
+  if (db_drop_field('stripe_subscriptions', 'customer')) {
+    return t('Deleted customer field from {stripe_customers}');
+  }
+}
+
+/**
+ * Enable the Stripe Customer module to ensure continued functionality.
+ */
+function stripe_subscription_update_7003() {
+  if (!module_exists('stripe_customer')) {
+    module_enable(array('stripe_customer'));
+    return t('Stripe Customer integration is now enabled.');
+  }
+}
+
+/**
+ * Add a unqique subscription_id field to {stripe_subscriptions}.
+ *
+ * // @todo: Mark records without a subscription_id as needing to be synced.
+ */
+function stripe_subscription_update_7004() {
+  db_add_field('stripe_subscriptions', 'subscription_id', array(
+    'description' => 'The Unique ID of this subscription.',
+    'type' => 'varchar',
+    'length' => 32,
+    'not null' => TRUE,
+    'default' => '',
+  ));
+  return t('Added subscription_id field.');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function stripe_subscription_uninstall() {
+  variable_del('stripe_subscribe_notify_cancelled');
+  variable_del('stripe_subscribe_notify_created');
+  variable_del('stripe_subscribe_notify_pmt_failed');
+  variable_del('stripe_subscribe_notify_pmt_success');
+  variable_del('stripe_subscribe_notify_pmt_upcoming');
+  variable_del('stripe_subscribe_notify_updated');
+  variable_del('stripe_subscription_cron_lastrun');
+  variable_del('stripe_subscribe_pmt_upcoming_days');
+  variable_del('stripe_subscription_address_fields_enabled');
+  variable_del('stripe_subscription_coupons_enabled');
+  variable_del('stripe_subscription_downgrade_method');
+  variable_del('stripe_subscription_reg_enable');
+  variable_del('stripe_subscription_reg_req');
+  variable_del('stripe_subscription_upgrade_method');
+}
