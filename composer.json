@@ -1,0 +1,22 @@
+{
+    "name": "drupal/stripe_subscription",
+    "description": "Stripe Subscription provides subscription integration with Stripe..",
+    "type": "drupal-module",
+    "homepage": "https://drupal.org/project/stripe_subscription",
+    "authors": [
+        {
+            "name": "David Eggertsen (deggertsen)",
+            "homepage": "https://www.drupal.org/u/deggertsen",
+            "role": "Maintainer"
+        }
+    ],
+    "support": {
+        "issues": "https://drupal.org/project/issues/stripe_subscription",
+        "source": "https://cgit.drupalcode.org/stripe_subscription"
+    },
+    "license": "GPL-2.0+",
+    "minimum-stability": "dev",
+    "require": {
+        "drupal/stripe": "~1.0"
+    }
+}
